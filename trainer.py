@@ -11,6 +11,7 @@ from tqdm import tqdm
 import tf_recorder as tensorboard
 import utils as utils
 import numpy as np
+import wandb
 # import tensorflow as tf
 
 class trainer:
@@ -206,8 +207,8 @@ class trainer:
         if self.phase == 'gtrns' and floor(self.resl)>2 and floor(self.resl)<=self.max_resl:
             alpha = self.complete['gen']/100.0
             transform = transforms.Compose( [   transforms.ToPILImage(),
-                                                transforms.Scale(size=int(pow(2,floor(self.resl)-1)), interpolation=0),      # 0: nearest
-                                                transforms.Scale(size=int(pow(2,floor(self.resl))), interpolation=0),      # 0: nearest
+                                                transforms.Scale(size=int(pow(2,floor(self.resl)-1)), interpolation=transforms.InterpolationMode.BICUBIC),      # 0: nearest
+                                                transforms.Scale(size=int(pow(2,floor(self.resl))), interpolation=transforms.InterpolationMode.BICUBIC),      # 0: nearest
                                                 transforms.ToTensor(),
                                             ] )
             x_low = x.clone().add(1).mul(0.5)
@@ -239,7 +240,7 @@ class trainer:
         self.z_test = torch.FloatTensor(self.loader.batchsize, self.nz)
         if self.use_cuda:
             self.z_test = self.z_test.cuda()
-        self.z_test = Variable(self.z_test, volatile=True)
+        self.z_test = Variable(self.z_test)
         self.z_test.data.resize_(self.loader.batchsize, self.nz).normal_(0.0, 1.0)
         
         for step in range(2, self.max_resl+1+5):
@@ -266,9 +267,8 @@ class trainer:
                
                 self.fx = self.D(self.x)
                 self.fx_tilde = self.D(self.x_tilde.detach())
-                
-		        loss_d = self.mse(self.fx.squeeze(), self.real_label) + \
-                                  self.mse(self.fx_tilde, self.fake_label)
+                loss_d = self.mse(self.fx.squeeze(), self.real_label) + \
+                                  self.mse(self.fx_tilde.squeeze(), self.fake_label)
                 loss_d.backward()
                 self.opt_d.step()
 

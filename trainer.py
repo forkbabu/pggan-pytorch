@@ -13,7 +13,10 @@ import utils as utils
 import numpy as np
 import wandb
 # import tensorflow as tf
+import wandb
+wandb.init(entity="ucalyptus",project="proggan",name="1")
 
+wandb.config = config
 class trainer:
     def __init__(self, config):
         self.config = config
@@ -51,6 +54,7 @@ class trainer:
         # network and cirterion
         self.G = net.Generator(config)
         self.D = net.Discriminator(config)
+        wandb.watch((self.G,self.D))
         print ('Generator structure: ')
         print(self.G.model)
         print ('Discriminator structure: ')
@@ -280,6 +284,7 @@ class trainer:
                 
                 # logging.
                 log_msg = ' [E:{0}][T:{1}][{2:6}/{3:6}]  errD: {4:.4f} | errG: {5:.4f} | [lr:{11:.5f}][cur:{6:.3f}][resl:{7:4}][{8}][{9:.1f}%][{10:.1f}%]'.format(self.epoch, self.globalTick, self.stack, len(self.loader.dataset), loss_d.item(), loss_g.item(), self.resl, int(pow(2,floor(self.resl))), self.phase, self.complete['gen'], self.complete['dis'], self.lr)
+                wandb.log({"g_loss":loss_g.item(),"d_loss":loss_d.item()})
                 tqdm.write(log_msg)
 
                 # save model.
@@ -356,9 +361,11 @@ class trainer:
                 save_path = os.path.join(path, ndis)
                 if not os.path.exists(save_path):
                     torch.save(self.get_state('dis'), save_path)
+                    wandb.save(save_path)
                     save_path = os.path.join(path, ngen)
                     torch.save(self.get_state('gen'), save_path)
-                    print('[snapshot] model saved @ {}'.format(path))
+                    wandb.save(save_path)
+                    print('[snapshot] model saved @ {} and also in wandb.'.format(path))
 
 if __name__ == '__main__':
     ## perform training.
